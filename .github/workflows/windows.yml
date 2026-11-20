@@ -35,6 +35,11 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $output -notmatch "AirCursor 2.2.0") {
             throw "Portable executable smoke test failed"
           }
+      - name: Include license and upstream attribution
+        shell: pwsh
+        run: |
+          Copy-Item LICENSE dist\\AirCursor\\LICENSE -Force
+          Copy-Item README.md dist\\AirCursor\\README.md -Force
       - name: Create portable ZIP
         shell: pwsh
         run: |
