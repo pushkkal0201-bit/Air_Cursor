@@ -5,6 +5,7 @@ import base64
 import functools
 import hmac
 import io
+import ipaddress
 import os
 import secrets
 import socket
@@ -17,6 +18,8 @@ from flask import Flask, jsonify, make_response, render_template, request
 from .airmouse import AirMouse
 
 SESSION_SECONDS = 60 * 60
+MAX_SESSIONS = 16
+VERSION = "2.2.0"
 MAX_ATTEMPTS = 5
 ATTEMPT_WINDOW = 120
 ACTIONS = {
@@ -57,6 +60,7 @@ def _local_ips():
 
 def create_app(mouse_instance=None, pairing_pin=None):
     app = Flask(__name__, template_folder="templates")
+    app.config["MAX_CONTENT_LENGTH"] = 2048
     app.config["PAIRING_PIN"] = pairing_pin or os.environ.get("AIRCURSOR_PAIRING_PIN") or f"{secrets.randbelow(1000000):06d}"
     mouse = mouse_instance if mouse_instance is not None else AirMouse()
     if mouse_instance is None:
@@ -66,18 +70,71 @@ def create_app(mouse_instance=None, pairing_pin=None):
     sessions = {}
     failures = {}
 
+    def _trusted_host(host):
+        """Disallow DNS-rebinding via public hostnames and arbitrary Host values."""
+        try:
+            hostname = urlsplit("http://" + host).hostname
+            if not hostname:
+                return False
+            if hostname == "localhost":
+                return True
+            parsed = ipaddress.ip_address(hostname)
+            return parsed.is_loopback or parsed.is_private
+        except (ValueError, TypeError):
+            return False
+
+    @app.before_request
+    def check_host():
+        if not _trusted_host(request.host):
+            return jsonify(error="untrusted_host"), 421
+
+    def _same_origin():
+        origin = request.headers.get("Origin")
+        if not origin:
+            return True
+        try:
+            value = urlsplit(origin)
+            return value.scheme == request.scheme and value.netloc == request.host
+        except (ValueError, TypeError):
+            return False
+
+    def _prune(now):
+        """Remove expired sessions/lockouts to bound in-memory state."""
+        for key, info in list(sessions.items()):
+            if info["expires"] <= now:
+                sessions.pop(key, None)
+        for key, (_count, reset) in list(failures.items()):
+            if reset <= now:
+                failures.pop(key, None)
+
+
     @app.after_request
     def secure_headers(response):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(self), accelerometer=(self), gyroscope=(self)"
+        )
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+            "connect-src 'self'; object-src 'none'; base-uri 'none'; "
+            "form-action 'self'; frame-ancestors 'none'"
+        )
         return response
 
     def valid_session():
         token = request.cookies.get("aircursor_session", "")
-        until = sessions.get(token, 0) if token else 0
-        return until > time.time()
+        info = sessions.get(token)
+        if not info:
+            return False
+        if info["expires"] <= time.time():
+            sessions.pop(token, None)
+            return False
+        return hmac.compare_digest(info["ip"], request.remote_addr or "")
 
     def protected(fn):
         @functools.wraps(fn)
@@ -85,8 +142,7 @@ def create_app(mouse_instance=None, pairing_pin=None):
             if not valid_session():
                 return jsonify(error="pairing_required"), 401
             if request.method != "GET":
-                origin = request.headers.get("Origin", "")
-                if origin and urlsplit(origin).netloc != request.host:
+                if not _same_origin():
                     return jsonify(error="invalid_origin"), 403
                 if request.headers.get("X-AirCursor-Client") != "1":
                     return jsonify(error="client_header_required"), 403
@@ -118,17 +174,17 @@ def create_app(mouse_instance=None, pairing_pin=None):
 
     @app.get("/api/v1/status")
     def status():
-        return jsonify(app="AirCursor", version="2.1.0", paired=valid_session())
+        return jsonify(app="AirCursor", version=VERSION, paired=valid_session())
 
     @app.post("/api/v1/pair")
     def pair():
         if request.headers.get("X-AirCursor-Client") != "1":
             return jsonify(error="client_header_required"), 403
-        origin = request.headers.get("Origin", "")
-        if origin and urlsplit(origin).netloc != request.host:
+        if not _same_origin():
             return jsonify(error="invalid_origin"), 403
         ip = request.remote_addr or "unknown"
         now = time.time()
+        _prune(now)
         count, reset = failures.get(ip, (0, now + ATTEMPT_WINDOW))
         if now >= reset:
             count, reset = 0, now + ATTEMPT_WINDOW
@@ -142,8 +198,10 @@ def create_app(mouse_instance=None, pairing_pin=None):
             failures[ip] = (count + 1, reset)
             return jsonify(error="incorrect_pin"), 401
         failures.pop(ip, None)
+        if len(sessions) >= MAX_SESSIONS:
+            return jsonify(error="too_many_sessions", message="Disconnect a paired device or restart the server."), 503
         token = secrets.token_urlsafe(32)
-        sessions[token] = now + SESSION_SECONDS
+        sessions[token] = {"expires": now + SESSION_SECONDS, "ip": ip}
         response = make_response(jsonify(paired=True))
         response.set_cookie("aircursor_session", token, max_age=SESSION_SECONDS,
                             httponly=True, samesite="Strict",
@@ -230,16 +288,11 @@ def create_app(mouse_instance=None, pairing_pin=None):
 
 
 def main():
-    host = os.environ.get("AIRCURSOR_HOST", "0.0.0.0")
-    port = int(os.environ.get("AIRCURSOR_PORT", "5055"))
-    app = create_app()
-    print("\nAirCursor 2.1 | Local network remote control", flush=True)
-    print(f"PAIRING PIN: {app.config['PAIRING_PIN']}", flush=True)
-    print(f"Open http://127.0.0.1:{port} on this computer", flush=True)
-    print("Use only on a trusted private network; press Ctrl+C to exit.\n", flush=True)
-    https = os.environ.get("AIRCURSOR_HTTPS") == "1"
-    app.run(host=host, port=port, debug=False, use_reloader=False,
-            ssl_context="adhoc" if https else None)
+    """Backwards-compatible entry point, delegated to the safe CLI."""
+    from .cli import main as cli_main
+    cli_main()
+
+
 
 
 if __name__ == "__main__":
