@@ -1,4 +1,4 @@
-"""AirCursor 2.0: paired local-network remote input server."""
+"""AirCursor 2.1: paired local-network remote input server."""
 from __future__ import annotations
 
 import base64
@@ -118,7 +118,7 @@ def create_app(mouse_instance=None, pairing_pin=None):
 
     @app.get("/api/v1/status")
     def status():
-        return jsonify(app="AirCursor", version="2.0.0", paired=valid_session())
+        return jsonify(app="AirCursor", version="2.1.0", paired=valid_session())
 
     @app.post("/api/v1/pair")
     def pair():
@@ -233,7 +233,7 @@ def main():
     host = os.environ.get("AIRCURSOR_HOST", "0.0.0.0")
     port = int(os.environ.get("AIRCURSOR_PORT", "5055"))
     app = create_app()
-    print("\nAirCursor 2.0 | Local network remote control", flush=True)
+    print("\nAirCursor 2.1 | Local network remote control", flush=True)
     print(f"PAIRING PIN: {app.config['PAIRING_PIN']}", flush=True)
     print(f"Open http://127.0.0.1:{port} on this computer", flush=True)
     print("Use only on a trusted private network; press Ctrl+C to exit.\n", flush=True)

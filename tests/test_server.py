@@ -94,3 +94,13 @@ def test_logout_revokes_session(client):
     pair(c)
     assert c.post("/api/v1/logout", json={}, headers=headers()).status_code == 200
     assert c.get("/api/v1/cursor").status_code == 401
+
+def test_dashboard_and_voice_assets(client):
+    c, _ = client
+    home = c.get("/")
+    assert home.status_code == 200
+    assert b'id="voice-start"' in home.data
+    assert b'id="access-profile"' in home.data
+    assert c.get("/static/advanced.js").status_code == 200
+    assert c.get("/static/voice_commands.js").status_code == 200
+    assert c.get("/api/v1/status").json["version"] == "2.1.0"

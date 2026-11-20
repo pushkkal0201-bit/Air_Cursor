@@ -1,6 +1,6 @@
-"""AirCursor 2.0 package."""
+"""AirCursor 2.1 package."""
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 from .server import create_app
 

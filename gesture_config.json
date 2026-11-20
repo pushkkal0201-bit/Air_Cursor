@@ -6,5 +6,8 @@
   "gesture_actions": {
     "index_pinch": "left_click",
     "middle_pinch": "right_click"
-  }
+  },
+  "deadzone_pixels": 3,
+  "dwell_click_seconds": 0,
+  "dwell_radius": 0.018
 }

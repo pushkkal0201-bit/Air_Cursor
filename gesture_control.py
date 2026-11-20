@@ -16,6 +16,9 @@ DEFAULTS = {
     "smoothing": 0.28,
     "pinch_threshold": 0.32,
     "scroll_speed": 24,
+    "deadzone_pixels": 3,
+    "dwell_click_seconds": 0.0,
+    "dwell_radius": 0.018,
     "gesture_actions": {"index_pinch": "left_click", "middle_pinch": "right_click"},
 }
 ALLOWED_ACTIONS = {"left_click", "right_click", "double_click", "middle_click", "none"}
@@ -25,6 +28,33 @@ def distance(points, a, b):
     return math.hypot(points[a].x - points[b].x, points[a].y - points[b].y)
 
 
+class DwellTracker:
+    """Trigger once after a finger remains within a small area for a set time."""
+
+    def __init__(self, seconds, radius):
+        self.seconds = seconds
+        self.radius = radius
+        self.reset()
+
+    def reset(self):
+        self.anchor = None
+        self.since = None
+        self.triggered = False
+
+    def update(self, x, y, now):
+        if self.seconds <= 0:
+            return False
+        if self.anchor is None or math.hypot(x - self.anchor[0], y - self.anchor[1]) > self.radius:
+            self.anchor = (x, y)
+            self.since = now
+            self.triggered = False
+            return False
+        if not self.triggered and now - self.since >= self.seconds:
+            self.triggered = True
+            return True
+        return False
+
+
 def load_config(path):
     settings = dict(DEFAULTS)
     settings["gesture_actions"] = dict(DEFAULTS["gesture_actions"])
@@ -32,7 +62,7 @@ def load_config(path):
         incoming = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(incoming, dict):
             raise ValueError("config must contain a JSON object")
-        for key in ("camera", "smoothing", "pinch_threshold", "scroll_speed"):
+        for key in ("camera", "smoothing", "pinch_threshold", "scroll_speed", "deadzone_pixels", "dwell_click_seconds", "dwell_radius"):
             if key in incoming:
                 settings[key] = incoming[key]
         settings["gesture_actions"].update(incoming.get("gesture_actions", {}))
@@ -40,12 +70,21 @@ def load_config(path):
     settings["smoothing"] = float(settings["smoothing"])
     settings["pinch_threshold"] = float(settings["pinch_threshold"])
     settings["scroll_speed"] = float(settings["scroll_speed"])
+    settings["deadzone_pixels"] = int(settings["deadzone_pixels"])
+    settings["dwell_click_seconds"] = float(settings["dwell_click_seconds"])
+    settings["dwell_radius"] = float(settings["dwell_radius"])
     if not 0 < settings["smoothing"] <= 1:
         raise ValueError("smoothing must be in (0, 1]")
     if not 0.1 <= settings["pinch_threshold"] <= 0.7:
         raise ValueError("pinch_threshold must be between 0.1 and 0.7")
     if not 1 <= settings["scroll_speed"] <= 100:
         raise ValueError("scroll_speed must be between 1 and 100")
+    if not 0 <= settings["deadzone_pixels"] <= 30:
+        raise ValueError("deadzone_pixels must be between 0 and 30")
+    if not 0 <= settings["dwell_click_seconds"] <= 5:
+        raise ValueError("dwell_click_seconds must be between 0 and 5 (0 disables dwell)")
+    if not 0.005 <= settings["dwell_radius"] <= 0.08:
+        raise ValueError("dwell_radius must be between 0.005 and 0.08")
     if any(action not in ALLOWED_ACTIONS for action in settings["gesture_actions"].values()):
         raise ValueError("gesture_actions supports left_click, right_click, double_click, middle_click, none")
     return settings
@@ -85,10 +124,13 @@ def main():
     last_action_time = 0.0
     last_scroll_y = None
     scroll_remainder = 0.0
+    dwell = DwellTracker(config["dwell_click_seconds"], config["dwell_radius"])
     drawing = mp.solutions.drawing_utils
     hands_lib = mp.solutions.hands
     print("Webcam active. Index finger = move, thumb-index pinch = left click,")
     print("thumb-middle pinch = right click, index+middle fingers = scroll. Q = quit.")
+    if config["dwell_click_seconds"]:
+        print("Dwell click enabled: hold the index finger still for {:.1f}s.".format(config["dwell_click_seconds"]))
     try:
         with hands_lib.Hands(max_num_hands=1, min_detection_confidence=0.65,
                              min_tracking_confidence=0.55) as hands:
@@ -122,6 +164,7 @@ def main():
                     middle_up = points[12].y < points[10].y
                     ring_up = points[16].y < points[14].y
                     if not pinch and index_up and middle_up and not ring_up:
+                        dwell.reset()
                         label = "Two-finger scroll"
                         avg_y = (points[8].y + points[12].y) / 2
                         if last_scroll_y is not None:
@@ -145,11 +188,22 @@ def main():
                             alpha = config["smoothing"]
                             smoothed = (smoothed[0] + (target[0] - smoothed[0]) * alpha,
                                         smoothed[1] + (target[1] - smoothed[1]) * alpha)
-                            pyautogui.moveTo(int(smoothed[0]), int(smoothed[1]), duration=0)
+                            current_x, current_y = pyautogui.position()
+                            if math.hypot(smoothed[0] - current_x, smoothed[1] - current_y) >= config["deadzone_pixels"]:
+                                pyautogui.moveTo(int(smoothed[0]), int(smoothed[1]), duration=0)
+                            if dwell.update(x, y, now):
+                                pyautogui.click(button="left")
+                                label = "Dwell click"
+                            elif dwell.since is not None and dwell.seconds > 0 and not dwell.triggered:
+                                elapsed = min(100, int(100 * (now - dwell.since) / dwell.seconds))
+                                label = "Point to move | Dwell {}%".format(elapsed)
+                        else:
+                            dwell.reset()
                 else:
                     last_pinch = None
                     last_scroll_y = None
                     smoothed = None
+                    dwell.reset()
                 cv2.putText(frame, label, (18, 33), cv2.FONT_HERSHEY_SIMPLEX,
                             0.7, (80, 255, 130), 2)
                 cv2.imshow("AirCursor - Hand Gesture Control (Q to quit)", frame)

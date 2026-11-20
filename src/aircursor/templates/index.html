@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0c1020">
-<title>AirCursor 2.0 · Remote control</title>
+<title>AirCursor 2.1 · Intelligent controls</title>
 <style>
 :root{color-scheme:dark;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:#0c1020;color:#e9efff}
 *{box-sizing:border-box}body{margin:0;padding:22px}main{max-width:1000px;margin:auto}h1{margin:0;font-size:2rem;letter-spacing:-.04em}
@@ -23,11 +23,24 @@ label{display:block;color:#c7d4ee;font-size:.92rem;margin-bottom:8px}.row{displa
 .qr{max-width:175px;background:white;padding:8px;border-radius:12px}.split{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .msg{min-height:22px;color:#a4e9bf}.error{color:#ffaaa9}code{color:#b4c6ff}
 @media(max-width:760px){.grid{grid-template-columns:1fr}body{padding:12px}.panel{padding:15px}#pad{height:310px}h1{font-size:1.65rem}}
+
+:focus-visible{outline:3px solid #ffdf8e;outline-offset:3px}
+button[aria-pressed="true"]{background:#346cb0}
+.large-controls button{min-height:54px;padding:15px 18px;font-size:1.06rem}
+.large-controls #pad{height:390px}
+.high-contrast{background:#000;color:#fff}
+.high-contrast .panel{background:#050505;border-color:#eee}
+.high-contrast button{background:#ffe265;color:#060606;font-weight:700}
+.high-contrast button.secondary{background:#d9e9ff;color:#060606}
+.high-contrast label,.high-contrast .small,.high-contrast p{color:#fff}
+.high-contrast input,.high-contrast select{background:#000;color:#fff;border-color:#fff}
+.reduced-motion *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
 <main>
-<header class="top"><div><h1>AirCursor <span style="color:#70a7ff">2.0</span></h1><p class="lead">Securely paired touchpad · motion controller · media shortcuts</p></div><span id="badge" class="tag">Not paired</span></header>
+<header class="top"><div><h1>AirCursor <span style="color:#70a7ff">2.1</span></h1><p class="lead">Securely paired touchpad · motion controller · media shortcuts</p></div><span id="badge" class="tag">Not paired</span></header>
 <section id="pairing" class="panel">
 <h2>Pair this device</h2><p>Enter the 6-digit PIN printed in the computer's AirCursor terminal. Sessions expire after 1 hour.</p>
 <form id="pair-form" class="row"><input id="pin" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit PIN" required style="flex:1;min-width:170px"><button type="submit">Pair device</button></form>
@@ -51,6 +64,28 @@ label{display:block;color:#c7d4ee;font-size:.92rem;margin-bottom:8px}.row{displa
 <div class="field"><label for="hold-action">Long press gesture</label><select id="hold-action"><option value="right">Right click</option><option value="left">Left click</option><option value="none">Disabled</option></select></div>
 <div class="field"><label for="motion-speed">Motion sensitivity <output id="motion-value">2</output></label><input id="motion-speed" type="range" min=".5" max="5" step=".5" value="2"></div>
 <button id="logout" class="secondary">Unpair this device</button>
+</div>
+
+<div class="panel">
+<h2>Voice commands <span class="small">(push-to-talk)</span></h2>
+<p class="small">Tap Listen and say one exact command: “next slide”, “previous slide”, “volume up”, “volume down”, “play pause”, “mute”, “left click”, “right click”, “double click”, “scroll up” or “scroll down”.</p>
+<div class="field"><label for="voice-language">Recognition language</label><select id="voice-language"><option value="en-US">English (US)</option><option value="en-IN" selected>English (India)</option><option value="en-GB">English (UK)</option></select></div>
+<div class="row"><button id="voice-start">🎙 Listen for one command</button><button id="voice-stop" class="secondary" disabled>Stop listening</button></div>
+<p class="small" id="voice-last" aria-live="polite"></p><p class="small" id="voice-status" role="status" aria-live="polite">Microphone starts only when you choose Listen.</p>
+<p class="small">Browser speech recognition may use a cloud speech service. Voice input requires HTTPS or localhost; do not use for private dictation.</p>
+</div>
+<div class="panel">
+<h2>Accessibility and comfort</h2>
+<div class="field"><label for="access-profile">Interaction profile</label><select id="access-profile">
+<option value="standard">Standard</option><option value="comfort">Comfort · high contrast and large buttons</option><option value="precision">Precision · lower cursor sensitivity</option><option value="presentation">Presentation · large controls</option>
+</select></div>
+<p class="small">Preferences are saved in this device's browser. These are presentation and input adjustments, not medical accessibility guarantees.</p>
+<div class="row">
+<button id="large-controls" class="secondary" type="button" data-label="Large controls" aria-pressed="false">Large controls</button>
+<button id="high-contrast" class="secondary" type="button" data-label="High contrast" aria-pressed="false">High contrast</button>
+<button id="reduced-motion" class="secondary" type="button" data-label="Reduced effects" aria-pressed="false">Reduced effects</button>
+</div>
+<p class="small">For webcam-based dwell-click and movement dead-zone settings, see gesture_config.json.</p>
 </div>
 <div class="panel"><h2>Connect another device</h2><div class="split">
 {% if qr %}<img class="qr" alt="QR code for this computer's address" src="data:image/png;base64,{{ qr }}">{% endif %}
@@ -105,5 +140,7 @@ $('motion-stop').onclick=()=>{stopMotion();motionMessage('Motion stopped.');};
 $('motion-calibrate').onclick=()=>{state.orientation=null;motionMessage('Calibrated. Move your phone to control the cursor.');};
 setOptions();start();
 </script>
+<script src="{{ url_for('static', filename='voice_commands.js') }}"></script>
+<script src="{{ url_for('static', filename='advanced.js') }}"></script>
 </body>
 </html>

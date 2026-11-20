@@ -1,6 +1,6 @@
-# AirCursor 2.0 — Remote Mouse + Webcam Gestures
+# AirCursor 2.1 — Gesture, Voice and Accessible Remote Controls
 
-AirCursor 2.0 is a local-network computer control project with an authenticated phone touchpad, presentation/media controls, an optional webcam-based hand-gesture controller, and experimental phone motion controls.
+AirCursor 2.1 is a local-network computer control project with an authenticated phone touchpad, presentation/media controls, optional webcam hand gestures, push-to-talk voice shortcuts, accessible control profiles, and experimental phone motion controls.
 
 **Original project:** [NiqueWrld/AirCursor](https://github.com/NiqueWrld/AirCursor), created by NiqueWrld. This project builds on the original MIT-licensed code. The original `LICENSE` is retained; see it for attribution and license terms.
 
@@ -13,6 +13,9 @@ AirCursor 2.0 is a local-network computer control project with an authenticated 
 - **Customizable controls** — Touch sensitivity, tap/hold mappings and experimental motion sensitivity stored in the phone browser.
 - **Computer vision** — Optional local webcam hand tracking using OpenCV and MediaPipe with mouse control, pinch clicks, two-finger scrolling, cursor smoothing and JSON-configurable gesture actions.
 - **Phone motion input (experimental)** — Browser DeviceOrientation sensors; requires a supported browser and trusted HTTPS origin.
+- **Push-to-talk voice commands** — Browser speech recognition with strict command allowlist. Only predefined shortcuts/clicks/scrolling can run, with no free-text command execution.
+- **Accessible UI profiles** — Comfort (large buttons and high contrast), precision (lower sensitivity), presentation (larger controls), reduced effects; stored locally.
+- **Webcam stability** — Configurable pointer deadzone and optional dwell-click after a steady finger hold.
 
 ## Quick start on Windows (CMD)
 
@@ -64,7 +67,21 @@ The webcam runs **locally** in a separate process, and is not started by a remot
 
 Edit `gesture_config.json` to change the camera index, smoothing, pinch sensitivity, scroll speed, and the `index_pinch` / `middle_pinch` mappings. Allowed mapping values: `left_click`, `right_click`, `double_click`, `middle_click`, `none`. You can also pass a custom file via `python gesture_control.py --config your-settings.json`.
 
+To turn on optional **dwell-click**, edit `gesture_config.json`: set `"dwell_click_seconds": 1.5`. When one pointing finger remains in a small region for that duration, a single left click fires; moving the finger outside `dwell_radius` re-arms the feature. Dwell-click is **off by default** to avoid accidental input. `deadzone_pixels` ignores tiny movements in the webcam controller.
+
 The optional webcam dependencies deliberately pin `mediapipe==0.10.21`, because newer MediaPipe releases removed the old `mp.solutions` API used by this controller. Python 3.11 is recommended.
+
+## Voice commands (phase 3)
+
+After pairing, open **Voice commands** in the web dashboard and choose **Listen for one command**. The page requests microphone access and stops recognition after one result. The **Stop listening** button and unpairing stop the microphone session. The application never stores audio or transcripts on the AirCursor server, although the **browser's speech recognition provider may process audio in the cloud**.
+
+Supported exact phrases (English): `next slide`, `previous slide`, `play pause`, `volume up`, `volume down`, `mute`, `left click`, `right click`, `double click`, `scroll up`, `scroll down`, `escape`, `enter`. Unrecognized text is ignored. Only fixed, explicitly allowed commands are submitted to the server.
+
+Voice support depends on the browser. Microphone input needs an HTTPS secure origin, or `http://localhost` on the same device. **An ordinary HTTP address on your phone's LAN is not a secure context**, so the touchpad still works but voice recognition normally does not. For phone voice, configure trusted HTTPS; see the warning below.
+
+## Accessibility and comfort profiles
+
+Choose **Standard**, **Comfort**, **Precision** or **Presentation** in the dashboard. Large buttons, high contrast and reduced visual effects can be toggled independently. The selected visual preferences remain on that browser only, not on the desktop server.
 
 ## Phone motion control (experimental)
 
@@ -93,7 +110,7 @@ python -m pip install pytest
 python -m pytest -q
 ```
 
-The repo includes a GitHub Actions workflow for headless server tests, input validation, pairing/rate-limit checks and gesture configuration tests. These do **not** substitute for manual hardware tests of the webcam, motion sensors or mobile browsers.
+The repo includes a GitHub Actions workflow for headless server tests, input validation, pairing/rate-limit checks, webcam dwell logic tests and strict voice parser tests. These do **not** substitute for manual hardware tests of the webcam, motion sensors or mobile browsers.
 
 ### Project layout
 
@@ -101,11 +118,15 @@ The repo includes a GitHub Actions workflow for headless server tests, input val
 - `src/aircursor/server.py` — Flask app and paired REST API.
 - `src/aircursor/templates/index.html` — Mobile UI.
 - `gesture_control.py` — Optional local webcam gesture controller.
-- `gesture_config.json` — Customizable webcam gestures.
+- `gesture_config.json` — Customizable webcam gestures and dwell settings.\n- `src/aircursor/static/voice_commands.js` — Strict client-side voice phrase parser.\n- `src/aircursor/static/advanced.js` — Push-to-talk and accessibility settings.
 - `requirements-vision.txt` — Optional computer-vision dependencies.
 - `tests/` — Automated tests.
 
 You can also install the package in editable mode with `python -m pip install -e .` and launch using `aircursor` or `python -m aircursor`.
+
+## Manual validation checklist
+
+Automated CI covers parser logic, API pairing, route availability, and simulated webcam dwell timing. It **cannot verify** physical webcam detection, a real phone's gyroscope, speech recognition services or Windows input behavior. On a trusted Windows laptop, check: pairing and logout, clicks and scrolling from your phone, voice controls on localhost or properly trusted HTTPS, comfort/precision profiles, the webcam gesture window, and optional dwell clicking.
 
 ## Safety and attribution
 

@@ -17,3 +17,12 @@ jobs:
         run: python -m compileall -q app.py gesture_control.py src/aircursor
       - name: Run tests
         run: python -m pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test strict voice command parser
+        run: node --test tests/voice.test.cjs
+      - name: Syntax check browser scripts
+        run: |
+          node --check src/aircursor/static/voice_commands.js
+          node --check src/aircursor/static/advanced.js
