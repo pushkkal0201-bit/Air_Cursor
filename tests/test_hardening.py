@@ -120,7 +120,7 @@ def test_cli_version_does_not_start_server(capsys):
     with pytest.raises(SystemExit) as stop:
         cli.main(["--version"])
     assert stop.value.code == 0
-    assert "2.2.0" in capsys.readouterr().out
+    assert "2.3.0" in capsys.readouterr().out
 
 
 def test_cli_local_only_default(monkeypatch):

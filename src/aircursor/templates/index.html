@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0c1020">
-<title>AirCursor 2.2 · Intelligent controls</title>
+<title>AirCursor 2.3 · Intelligent controls</title>
 <style>
 :root{color-scheme:dark;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:#0c1020;color:#e9efff}
 *{box-sizing:border-box}body{margin:0;padding:22px}main{max-width:1000px;margin:auto}h1{margin:0;font-size:2rem;letter-spacing:-.04em}
@@ -40,7 +40,7 @@ button[aria-pressed="true"]{background:#346cb0}
 </head>
 <body>
 <main>
-<header class="top"><div><h1>AirCursor <span style="color:#70a7ff">2.2</span></h1><p class="lead">Securely paired touchpad · motion controller · media shortcuts</p></div><span id="badge" class="tag">Not paired</span></header>
+<header class="top"><div><h1>AirCursor <span style="color:#70a7ff">2.3</span></h1><p class="lead">Securely paired touchpad · motion controller · media shortcuts</p></div><span id="badge" class="tag">Not paired</span></header>
 <section id="pairing" class="panel">
 <h2>Pair this device</h2><p>Enter the 6-digit PIN printed in the computer's AirCursor terminal. Sessions expire after 1 hour.</p>
 <form id="pair-form" class="row"><input id="pin" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit PIN" required style="flex:1;min-width:170px"><button type="submit">Pair device</button></form>
@@ -55,8 +55,9 @@ button[aria-pressed="true"]{background:#346cb0}
 <button data-action="volume_down" class="secondary">− Volume</button><button data-action="volume_up" class="secondary">+ Volume</button>
 <button data-action="escape" class="secondary">Escape</button><button data-action="enter" class="secondary">Enter</button></div>
 <h2 style="margin-top:22px">Motion-based air mouse <span class="small">(experimental)</span></h2>
-<p class="small">Uses the phone's orientation sensor. Requires a supported browser and a trusted HTTPS connection.</p>
-<div class="row"><button id="motion-start" class="secondary">Enable motion</button><button id="motion-stop" class="secondary" disabled>Stop motion</button><button id="motion-calibrate" class="secondary" disabled>Calibrate</button></div><p id="motion-message" class="small" role="status"></p>
+<p class="small">Tilt your phone to move the cursor. Use its private Tailscale HTTPS address, then pair and enable motion.</p>
+<p class="small" id="motion-transport" role="status">Checking HTTPS…</p>
+<div class="row"><button id="motion-start" class="secondary">Enable motion</button><button id="motion-stop" class="secondary" disabled>Stop motion</button><button id="motion-calibrate" class="secondary" disabled>Calibrate</button></div><p id="motion-message" class="small" role="status"></p><p id="motion-reading" class="small" aria-live="off"></p>
 </div>
 <div class="panel"><h2>Customize controls</h2>
 <div class="field"><label for="sensitivity">Touchpad sensitivity <output id="sensitivity-value">1.5</output></label><input id="sensitivity" type="range" min=".5" max="3" step=".1" value="1.5"></div>
@@ -89,12 +90,13 @@ button[aria-pressed="true"]{background:#346cb0}
 </div>
 <div class="panel"><h2>Connect another device</h2><div class="split">
 {% if qr %}<img class="qr" alt="QR code for this computer's address" src="data:image/png;base64,{{ qr }}">{% endif %}
-<div><p class="small">Open an address below on your phone connected to the same private Wi-Fi, then enter the PIN from the computer's terminal.</p>
+<div><p class="small">Open the listed address on your paired phone, then enter the PIN from the computer's terminal. For motion sensors, use the HTTPS Tailscale URL.</p>
 {% for url in urls %}<p><code>{{ url }}</code></p>{% else %}<p class="small">No private network address detected. Check Wi-Fi.</p>{% endfor %}</div></div>
-<p class="small">Never expose AirCursor to the public internet. HTTP does not encrypt traffic.</p></div>
+<p class="small">Use Tailscale Serve, never Tailscale Funnel. Local HTTP is not encrypted; private Tailscale HTTPS is the recommended phone connection.</p></div>
 </div>
 </section>
 </main>
+<script src="{{ url_for('static', filename='motion_math.js') }}"></script>
 <script src="{{ url_for('static', filename='touchpad.js') }}"></script>
 <script src="{{ url_for('static', filename='voice_commands.js') }}"></script>
 <script src="{{ url_for('static', filename='advanced.js') }}"></script>

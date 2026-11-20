@@ -1,6 +1,6 @@
-# AirCursor 2.2 — Secure Local Controls and Windows Packaging
+# AirCursor 2.3 — Secure Local Controls and Windows Packaging
 
-AirCursor 2.2 is a local-network computer control project with an authenticated phone touchpad, presentation/media controls, optional webcam hand gestures, push-to-talk voice shortcuts, accessible control profiles, and experimental phone motion controls.
+AirCursor 2.3 is a local-network computer control project with an authenticated phone touchpad, presentation/media controls, optional webcam hand gestures, push-to-talk voice shortcuts, accessible control profiles, and experimental phone motion controls over trusted private Tailscale HTTPS.
 
 **Original project:** [NiqueWrld/AirCursor](https://github.com/NiqueWrld/AirCursor), created by NiqueWrld. This project builds on the original MIT-licensed code. The original `LICENSE` is retained; see it for attribution and license terms.
 
@@ -12,17 +12,51 @@ AirCursor 2.2 is a local-network computer control project with an authenticated 
 - **Media/presentation shortcuts** — Slides, volume, play/pause, mute, Escape and Enter. No arbitrary command execution.
 - **Customizable controls** — Touch sensitivity, tap/hold mappings and experimental motion sensitivity stored in the phone browser.
 - **Computer vision** — Optional local webcam hand tracking using OpenCV and MediaPipe with mouse control, pinch clicks, two-finger scrolling, cursor smoothing and JSON-configurable gesture actions.
-- **Phone motion input (experimental)** — Browser DeviceOrientation sensors; requires a supported browser and trusted HTTPS origin.
+- **Phone motion input (experimental)** — Browser DeviceOrientation sensors, tilt-to-velocity pointer movement, adjustable speed and live calibration. Trusted HTTPS is available through Tailscale Serve.
 - **Push-to-talk voice commands** — Browser speech recognition with strict command allowlist. Only predefined shortcuts/clicks/scrolling can run, with no free-text command execution.
 - **Accessible UI profiles** — Comfort (large buttons and high contrast), precision (lower sensitivity), presentation (larger controls), reduced effects; stored locally.
 - **Webcam stability** — Configurable pointer deadzone and optional dwell-click after a steady finger hold.
+
+## Phone motion sensors over private HTTPS (Tailscale Serve)
+
+This is the recommended **Air Mouse** setup. Tailscale Serve supplies a trusted HTTPS URL **inside your private tailnet**, without publicly exposing your laptop. It is NOT Tailscale Funnel. Sensor APIs need a supported phone browser and trusted HTTPS origin.
+
+**First-time setup (Windows + phone):**
+
+1. Install [Tailscale](https://tailscale.com/download) on **both your Windows laptop and your phone**. Log in to the same tailnet and ensure both are connected. Allow HTTPS / Tailscale Serve for your tailnet if prompted.
+2. Open **Windows CMD** and update AirCursor with `git pull --ff-only origin main`. Create/activate `.venv` and install `python -m pip install -r requirements.txt` if necessary.
+3. In a **separate Windows CMD** on the laptop, run:
+
+   ```bat
+   tailscale serve --bg 5055
+   tailscale serve status
+   ```
+
+   If Tailscale is not found on your PATH, open the Tailscale command-line tool as installed on your PC. The Serve status displays an address similar to `https://YOUR-PC.YOUR-TAILNET.ts.net`. The real domain comes from Tailscale; this example is **not** your address. You may need an elevated CMD or approval in Tailscale to configure Serve.
+4. Back in the project folder, **start the Python app in a second CMD**. Enter **only the hostname** from `tailscale serve status`, without `https://`, any port, or slash:
+
+   ```bat
+   cd /d C:\Users\dell\Air_Cursor
+   .venv\Scripts\activate
+   python app.py --tailscale-host YOUR-PC.YOUR-TAILNET.ts.net
+   ```
+
+   Alternatively, a built portable EXE supports `AirCursor.exe --tailscale-host YOUR-PC.YOUR-TAILNET.ts.net`. The app **always binds to 127.0.0.1 in this mode** and verifies the exact configured hostname behind the reverse proxy. Do not combine `--tailscale-host` with `--lan` or `--https`.
+5. On the connected phone, open the **actual HTTPS URL** shown by Tailscale or scan AirCursor's QR code. Enter the pairing PIN printed by the computer. Find **Motion-based air mouse**, tap **Enable motion**, and grant sensor permission if requested.
+6. Hold the phone comfortably still to establish a neutral orientation, then **tilt it** to move your computer cursor. Tap **Calibrate** to set a new neutral position; use **Motion sensitivity** to adjust movement speed and **Stop motion** to turn it off.
+
+**Troubleshooting:** If the dashboard shows "Insecure HTTP", you opened the local IP address rather than the HTTPS Tailscale URL. If you see `untrusted_host`, the `--tailscale-host` value does not exactly match the hostname Tailscale Serve uses. If it says "No orientation readings", check that Tailscale is connected on your phone, you allowed sensor permissions, the phone has motion sensors, and your browser supports the DeviceOrientation API. Some browsers/platforms simply do not support it; the phone touchpad remains available. Voice commands may also require a supported HTTPS browser.
+
+**Stop sharing privately:** Close AirCursor with Ctrl+C, then run `tailscale serve --https=443 off` (or review `tailscale serve status`) to stop that Serve HTTPS endpoint. Do **not** use `tailscale funnel`, router port forwarding, or an untrusted public network. Tailscale members allowed to reach the served device may still reach the pairing screen; keep the PIN private and manage your tailnet access controls.
+
+Official references: [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve), [Tailscale CLI](https://tailscale.com/docs/reference/tailscale-cli/serve), [MDN orientation permissions](https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/requestPermission_static).
 
 ## Windows installer / portable executable
 
 The `.github/workflows/windows.yml` workflow builds **both** a portable Windows ZIP and an unsigned Inno Setup installer on a Windows GitHub Actions runner. It runs a `AirCursor.exe --version` smoke test, then uploads the two build artifacts to the Actions run for manual download.
 
-- Open **Actions → Windows executable and installer → latest successful run → Artifacts** and download either `AirCursor-2.2.0-Windows-Installer` or `AirCursor-2.2.0-Windows-Portable`.
-- For the installer: extract the artifact ZIP and run `AirCursor-2.2.0-Windows-Setup.exe`. It installs per user without administrator privileges. The Start menu offers **This PC only** and **Private Wi-Fi** shortcuts. Use Private Wi-Fi only on a trusted network.
+- Open **Actions → Windows executable and installer → latest successful run → Artifacts** and download either `AirCursor-2.3.0-Windows-Installer` or `AirCursor-2.3.0-Windows-Portable`.
+- For the installer: extract the artifact ZIP and run `AirCursor-2.3.0-Windows-Setup.exe`. It installs per user without administrator privileges. The Start menu offers **This PC only** and **Private Wi-Fi** shortcuts. Use Private Wi-Fi only on a trusted network.
 - For the portable ZIP: extract the ZIP and run `AirCursor.exe` (local-only) or `AirCursor.exe --lan` in Command Prompt. Keep the bundled files together.
 - The installer is **unsigned**. Windows SmartScreen may warn; inspect the GitHub Actions source and verify the file before choosing to run it. No auto-start or network exposure occurs at install time.
 - Installers are uploaded as temporary CI artifacts, **not** automatically published as a GitHub Release or to PyPI. Real Windows hardware, microphone, phone and camera testing is still required.
@@ -96,14 +130,14 @@ Choose **Standard**, **Comfort**, **Precision** or **Presentation** in the dashb
 
 ## Phone motion control (experimental)
 
-Select **Enable motion** in the phone dashboard. The feature uses the standard browser orientation API, not the webcam. For many browsers the API is restricted to **secure HTTPS contexts** and requires sensor permission. An HTTP LAN URL will still support the touchpad, but motion input may be unavailable.
+Select **Enable motion** in the phone dashboard after connecting via the trusted Tailscale HTTPS URL described above. AirCursor's motion controls calibrate from your current phone orientation and apply a ±2-degree dead zone to help prevent jitter. The local touchpad continues to work over HTTP on a private network, but browser sensor input ordinarily requires a secure HTTPS origin.
 
-`AIRCURSOR_HTTPS=1` enables Flask's development-only self-signed HTTPS mode (requires `cryptography`), **not a trusted certificate**. For reliable sensor access, use a certificate the phone trusts and a suitable HTTPS reverse proxy. Do not bypass browser security warnings on an untrusted network.
+`AIRCURSOR_HTTPS=1` enables Flask's development-only self-signed HTTPS mode (requires `cryptography`), **not a trusted certificate**. Use the built-in `--tailscale-host` option with Tailscale Serve instead: it provides a trusted tailnet HTTPS address and correct proxy handling. Do not bypass browser security warnings on an untrusted network.
 
 ## Release security hardening
 
-- **Local-only by default**; LAN control is only enabled by an explicit `--lan` launch flag or advanced host configuration.
-- Strict IP/localhost Host allowlist reduces DNS-rebinding exposure; cross-origin action requests are rejected and the app has no permissive CORS configuration.
+- **Local-only by default**; LAN control requires `--lan`. HTTPS Tailscale proxy mode is explicitly enabled with `--tailscale-host` and still keeps the backend on 127.0.0.1.
+- Strict IP/localhost Host allowlist reduces DNS-rebinding exposure. Tailscale proxy mode adds exactly one validated `*.ts.net` hostname and trusts only one reverse proxy's scheme/host headers, while preserving cross-origin checks and secure cookies. No permissive CORS is configured.
 - Input JSON is size-limited to 2 KiB. Device pairing remains time-limited and rate-limited. Sessions are IP-bound and the server stores no more than 16 live sessions.
 - Mouse fail-safe is enabled; moving to a screen corner can interrupt automation. The phone UI serves its scripts as local files with a restrictive script Content Security Policy.
 - These are defense-in-depth improvements, **not encryption**: plain HTTP on the local network can still leak the PIN/session to someone observing the network. Avoid public Wi-Fi and port forwarding. Use a properly trusted HTTPS reverse proxy for phone sensor/voice control.
@@ -130,7 +164,7 @@ python -m pytest -q
 python scripts/benchmark_api.py --requests 500
 ```
 
-The CI matrix runs headless API/security tests, browser JavaScript syntax and voice parser tests, package build and metadata checks on Linux/Windows, and an **informational in-process API benchmark**. It does not claim real phone latency or webcam accuracy. Windows CI creates the executable and installer and runs an executable version smoke test. These do **not** substitute for manual hardware tests of the webcam, motion sensors or mobile browsers.
+The CI matrix runs headless API/security tests, trusted proxy/host/session tests, phone tilt math tests, browser JavaScript syntax and voice parser tests, package build and metadata checks on Linux/Windows, and an **informational in-process API benchmark**. It does not claim real phone latency or webcam accuracy. Windows CI creates the executable and installer and runs an executable version smoke test. These do **not** substitute for manual hardware tests of the webcam, motion sensors or mobile browsers.
 
 ### Project layout
 

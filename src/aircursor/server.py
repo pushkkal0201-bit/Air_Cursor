@@ -7,6 +7,7 @@ import hmac
 import io
 import ipaddress
 import os
+import re
 import secrets
 import socket
 import time
@@ -14,12 +15,13 @@ from urllib.parse import urlsplit
 
 import qrcode
 from flask import Flask, jsonify, make_response, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .airmouse import AirMouse
 
 SESSION_SECONDS = 60 * 60
 MAX_SESSIONS = 16
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 MAX_ATTEMPTS = 5
 ATTEMPT_WINDOW = 120
 ACTIONS = {
@@ -58,8 +60,35 @@ def _local_ips():
     return sorted(ip for ip in addresses if ip.startswith(("10.", "192.168.")) or (ip.startswith("172.") and 16 <= int(ip.split(".")[1]) <= 31))
 
 
-def create_app(mouse_instance=None, pairing_pin=None):
+_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z")
+
+
+def normalize_tailscale_hostname(value):
+    """Require an exact device.tailnet.ts.net host, not a URL or wildcard.
+
+    Explicit allowlisting is necessary: accepting all *.ts.net hosts would
+    weaken the DNS-rebinding defense.
+    """
+    if not isinstance(value, str) or len(value) > 253:
+        raise ValueError("provide a valid Tailscale device hostname")
+    host = value.lower().strip()
+    labels = host.split(".")
+    if len(labels) < 4 or labels[-2:] != ["ts", "net"] or not all(
+        _LABEL.fullmatch(label) for label in labels
+    ):
+        raise ValueError("use only the device.tailnet.ts.net hostname, without https:// or /")
+    return host
+
+
+def create_app(mouse_instance=None, pairing_pin=None, tailscale_host=None):
+    tailscale_host = normalize_tailscale_hostname(tailscale_host) if tailscale_host else None
     app = Flask(__name__, template_folder="templates")
+    app.config["TAILSCALE_HOST"] = tailscale_host
+    if tailscale_host:
+        # Opt-in ONLY for an app bound to 127.0.0.1 behind Tailscale Serve.
+        # Tailscale Serve sets X-Forwarded-Proto and X-Forwarded-Host itself.
+        # Never trust X-Forwarded-For: source-IP based sessions stay local.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
     app.config["MAX_CONTENT_LENGTH"] = 2048
     app.config["PAIRING_PIN"] = pairing_pin or os.environ.get("AIRCURSOR_PAIRING_PIN") or f"{secrets.randbelow(1000000):06d}"
     mouse = mouse_instance if mouse_instance is not None else AirMouse()
@@ -78,6 +107,10 @@ def create_app(mouse_instance=None, pairing_pin=None):
                 return False
             if hostname == "localhost":
                 return True
+            if tailscale_host and hostname == tailscale_host:
+                # A request to the public-looking hostname must actually
+                # have arrived through the HTTPS-terminating trusted proxy.
+                return request.is_secure
             parsed = ipaddress.ip_address(hostname)
             return parsed.is_loopback or parsed.is_private
         except (ValueError, TypeError):
@@ -114,6 +147,8 @@ def create_app(mouse_instance=None, pairing_pin=None):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
+        if tailscale_host and request.is_secure and request.host.split(":")[0] == tailscale_host:
+            response.headers["Strict-Transport-Security"] = "max-age=86400"
         response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(self), accelerometer=(self), gyroscope=(self)"
@@ -157,11 +192,13 @@ def create_app(mouse_instance=None, pairing_pin=None):
 
     @app.get("/")
     def home():
-        host = os.environ.get("AIRCURSOR_HOST", "0.0.0.0")
+        host = os.environ.get("AIRCURSOR_HOST", "127.0.0.1")
         scheme = "https" if os.environ.get("AIRCURSOR_HTTPS") == "1" else "http"
         port = int(os.environ.get("AIRCURSOR_PORT", "5055"))
         urls = []
-        if host != "127.0.0.1":
+        if tailscale_host:
+            urls.append("https://" + tailscale_host)
+        elif host not in ("127.0.0.1", "localhost"):
             for ip in _local_ips():
                 urls.append(f"{scheme}://{ip}:{port}")
         qr = None

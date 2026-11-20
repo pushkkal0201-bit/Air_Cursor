@@ -48,7 +48,8 @@ jobs:
       - name: Check browser JavaScript and voice command parser
         if: runner.os == 'Linux'
         run: |
+          node --check src/aircursor/static/motion_math.js
           node --check src/aircursor/static/touchpad.js
           node --check src/aircursor/static/advanced.js
           node --check src/aircursor/static/voice_commands.js
-          node --test tests/voice.test.cjs
+          node --test tests/voice.test.cjs tests/motion.test.cjs
