@@ -14,6 +14,7 @@
     function axis(angle) {
       const cutoff = 2.0; // degrees of dead zone; filters hand tremor.
       const amount = Math.max(0, Math.abs(angle) - cutoff);
+      if (amount === 0) return 0;
       const speed = Math.sign(angle) * amount * sensitivity * 0.25;
       return Math.round(Math.max(-28, Math.min(28, speed)));
     }
