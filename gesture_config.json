@@ -1,0 +1,10 @@
+{
+  "camera": 0,
+  "smoothing": 0.28,
+  "pinch_threshold": 0.32,
+  "scroll_speed": 24,
+  "gesture_actions": {
+    "index_pinch": "left_click",
+    "middle_pinch": "right_click"
+  }
+}

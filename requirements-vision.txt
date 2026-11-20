@@ -1,0 +1,5 @@
+-r requirements.txt
+# The legacy Hands Solutions API is present in MediaPipe 0.10.21.
+# Later releases removed mp.solutions; keep this pinned for gesture_control.py.
+mediapipe==0.10.21
+opencv-python>=4.8,<5

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aircursor"
-version = "1.0.4"
-description = "Remote mouse control server with web interface and REST API"
+version = "2.0.0"
+description = "Paired remote mouse server with phone controls and optional webcam gestures"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "NiqueWrld", email = "niquewrld@outlook.com" }]
@@ -40,10 +40,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/NiqueWrld/AirCursor"
-Repository = "https://github.com/NiqueWrld/AirCursor"
-Issues = "https://github.com/NiqueWrld/AirCursor/issues"
-Documentation = "https://github.com/NiqueWrld/AirCursor#readme"
+Homepage = "https://github.com/pushkkal0201-bit/Air_Cursor"
+Repository = "https://github.com/pushkkal0201-bit/Air_Cursor"
+Issues = "https://github.com/pushkkal0201-bit/Air_Cursor/issues"
+Documentation = "https://github.com/pushkkal0201-bit/Air_Cursor#readme"
 
 [project.scripts]
 aircursor = "aircursor.__main__:main"
@@ -54,3 +54,5 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 exclude = ["tests*"]
+[tool.setuptools.package-data]
+aircursor = ["templates/*.html"]
