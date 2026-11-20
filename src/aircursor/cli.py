@@ -73,7 +73,7 @@ def main(argv=None):
     if args.https:
         os.environ["AIRCURSOR_HTTPS"] = "1"
     https = os.environ.get("AIRCURSOR_HTTPS", "0") == "1"
-    app = create_app(tailscale_host=tailscale_host)
+    app = create_app(tailscale_host=tailscale_host) if tailscale_host else create_app()
     scheme = "https" if https else "http"
     print("\nAirCursor {} — private remote controls".format(VERSION), flush=True)
     print("PAIRING PIN: {}".format(app.config["PAIRING_PIN"]), flush=True)
