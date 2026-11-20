@@ -1,6 +1,6 @@
-# AirCursor 2.1 — Gesture, Voice and Accessible Remote Controls
+# AirCursor 2.2 — Secure Local Controls and Windows Packaging
 
-AirCursor 2.1 is a local-network computer control project with an authenticated phone touchpad, presentation/media controls, optional webcam hand gestures, push-to-talk voice shortcuts, accessible control profiles, and experimental phone motion controls.
+AirCursor 2.2 is a local-network computer control project with an authenticated phone touchpad, presentation/media controls, optional webcam hand gestures, push-to-talk voice shortcuts, accessible control profiles, and experimental phone motion controls.
 
 **Original project:** [NiqueWrld/AirCursor](https://github.com/NiqueWrld/AirCursor), created by NiqueWrld. This project builds on the original MIT-licensed code. The original `LICENSE` is retained; see it for attribution and license terms.
 
@@ -17,6 +17,16 @@ AirCursor 2.1 is a local-network computer control project with an authenticated 
 - **Accessible UI profiles** — Comfort (large buttons and high contrast), precision (lower sensitivity), presentation (larger controls), reduced effects; stored locally.
 - **Webcam stability** — Configurable pointer deadzone and optional dwell-click after a steady finger hold.
 
+## Windows installer / portable executable
+
+The `.github/workflows/windows.yml` workflow builds **both** a portable Windows ZIP and an unsigned Inno Setup installer on a Windows GitHub Actions runner. It runs a `AirCursor.exe --version` smoke test, then uploads the two build artifacts to the Actions run for manual download.
+
+- Open **Actions → Windows executable and installer → latest successful run → Artifacts** and download either `AirCursor-2.2.0-Windows-Installer` or `AirCursor-2.2.0-Windows-Portable`.
+- For the installer: extract the artifact ZIP and run `AirCursor-2.2.0-Windows-Setup.exe`. It installs per user without administrator privileges. The Start menu offers **This PC only** and **Private Wi-Fi** shortcuts. Use Private Wi-Fi only on a trusted network.
+- For the portable ZIP: extract the ZIP and run `AirCursor.exe` (local-only) or `AirCursor.exe --lan` in Command Prompt. Keep the bundled files together.
+- The installer is **unsigned**. Windows SmartScreen may warn; inspect the GitHub Actions source and verify the file before choosing to run it. No auto-start or network exposure occurs at install time.
+- Installers are uploaded as temporary CI artifacts, **not** automatically published as a GitHub Release or to PyPI. Real Windows hardware, microphone, phone and camera testing is still required.
+
 ## Quick start on Windows (CMD)
 
 Requires Python 3.11 (recommended), a computer and optionally a phone on the same private Wi-Fi.
@@ -26,25 +36,26 @@ cd C:\Users\dell\Air_Cursor
 py -3.11 -m venv .venv
 .venv\Scripts\activate
 python -m pip install -r requirements.txt
-python app.py
+python app.py --lan
 ```
+
+The server defaults to **localhost-only** when started without `--lan`. To connect a phone, explicitly run `python app.py --lan` or `aircursor --lan` on a **private, trusted Wi-Fi network**. To keep the server on this computer only, use `python app.py --local-only` or simply `python app.py`.
 
 The server prints a **PAIRING PIN** locally in the terminal. Visit `http://127.0.0.1:5055` on your computer. On your phone, use the local IP URL or scan the QR code on the page, then enter the PIN displayed in the computer terminal. Never share the PIN in screenshots or public chats.
 
 Stop the server with **Ctrl+C**. Set `AIRCURSOR_PORT` to change the port.
 
-To disable phone/network access and bind to your computer only:
+To explicitly bind to your computer only:
 
 ```bat
 set AIRCURSOR_HOST=127.0.0.1
 python app.py
 ```
 
-To explicitly run on the local network (the default):
+To explicitly opt in to local Wi-Fi access:
 
 ```bat
-set AIRCURSOR_HOST=0.0.0.0
-python app.py
+python app.py --lan
 ```
 
 Only allow the Windows Firewall prompt on **private/trusted networks**, not public networks. HTTP traffic, including the pairing PIN, is **not encrypted**. The PIN protects from accidental/unauthorized access but **does not make HTTP secure**. Never forward the port, use this over public Wi-Fi, or expose it on the internet.
@@ -89,6 +100,14 @@ Select **Enable motion** in the phone dashboard. The feature uses the standard b
 
 `AIRCURSOR_HTTPS=1` enables Flask's development-only self-signed HTTPS mode (requires `cryptography`), **not a trusted certificate**. For reliable sensor access, use a certificate the phone trusts and a suitable HTTPS reverse proxy. Do not bypass browser security warnings on an untrusted network.
 
+## Release security hardening
+
+- **Local-only by default**; LAN control is only enabled by an explicit `--lan` launch flag or advanced host configuration.
+- Strict IP/localhost Host allowlist reduces DNS-rebinding exposure; cross-origin action requests are rejected and the app has no permissive CORS configuration.
+- Input JSON is size-limited to 2 KiB. Device pairing remains time-limited and rate-limited. Sessions are IP-bound and the server stores no more than 16 live sessions.
+- Mouse fail-safe is enabled; moving to a screen corner can interrupt automation. The phone UI serves its scripts as local files with a restrictive script Content Security Policy.
+- These are defense-in-depth improvements, **not encryption**: plain HTTP on the local network can still leak the PIN/session to someone observing the network. Avoid public Wi-Fi and port forwarding. Use a properly trusted HTTPS reverse proxy for phone sensor/voice control.
+
 ## API (paired session required)
 
 - `GET /api/v1/status` — Connection state, accessible before pairing.
@@ -108,9 +127,10 @@ POST/PUT/PATCH requests also require `X-AirCursor-Client: 1` and an authenticate
 ```bat
 python -m pip install pytest
 python -m pytest -q
+python scripts/benchmark_api.py --requests 500
 ```
 
-The repo includes a GitHub Actions workflow for headless server tests, input validation, pairing/rate-limit checks, webcam dwell logic tests and strict voice parser tests. These do **not** substitute for manual hardware tests of the webcam, motion sensors or mobile browsers.
+The CI matrix runs headless API/security tests, browser JavaScript syntax and voice parser tests, package build and metadata checks on Linux/Windows, and an **informational in-process API benchmark**. It does not claim real phone latency or webcam accuracy. Windows CI creates the executable and installer and runs an executable version smoke test. These do **not** substitute for manual hardware tests of the webcam, motion sensors or mobile browsers.
 
 ### Project layout
 
@@ -118,11 +138,17 @@ The repo includes a GitHub Actions workflow for headless server tests, input val
 - `src/aircursor/server.py` — Flask app and paired REST API.
 - `src/aircursor/templates/index.html` — Mobile UI.
 - `gesture_control.py` — Optional local webcam gesture controller.
-- `gesture_config.json` — Customizable webcam gestures and dwell settings.\n- `src/aircursor/static/voice_commands.js` — Strict client-side voice phrase parser.\n- `src/aircursor/static/advanced.js` — Push-to-talk and accessibility settings.
+- `gesture_config.json` — Customizable webcam gestures and dwell settings.
+- `src/aircursor/static/touchpad.js` — External touchpad JavaScript for stronger CSP.
+- `src/aircursor/static/voice_commands.js` — Strict client-side voice phrase parser.
+- `src/aircursor/static/advanced.js` — Push-to-talk and accessibility settings.
 - `requirements-vision.txt` — Optional computer-vision dependencies.
 - `tests/` — Automated tests.
+- `installer/AirCursor.iss` — Inno Setup installer recipe.
+- `scripts/benchmark_api.py` — Reproducible fake-input API microbenchmark.
+- `run_aircursor.py` — PyInstaller entry point.
 
-You can also install the package in editable mode with `python -m pip install -e .` and launch using `aircursor` or `python -m aircursor`.
+You can also install the package in editable mode with `python -m pip install -e .` and launch using `aircursor` or `python -m aircursor`. `aircursor --version` works without starting the server.
 
 ## Manual validation checklist
 

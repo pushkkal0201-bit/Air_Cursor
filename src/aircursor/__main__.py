@@ -1,5 +1,6 @@
 """python -m aircursor entry point."""
-from .server import main
+from .cli import main
+
 
 if __name__ == "__main__":
     main()

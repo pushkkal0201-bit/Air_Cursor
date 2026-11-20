@@ -12,7 +12,7 @@ class AirMouse:
     def __init__(self) -> None:
         if pyautogui is None:
             raise RuntimeError("pyautogui is required. Install dependencies from requirements.txt")
-        pyautogui.FAILSAFE = False
+        pyautogui.FAILSAFE = True
 
     def position(self) -> Tuple[int, int]:
         p = pyautogui.position()
@@ -37,3 +37,10 @@ class AirMouse:
             pyautogui.scroll(int(dy))
         if dx:
             pyautogui.hscroll(int(dx))
+
+    def press(self, key: str) -> None:
+        allowed = {"right", "left", "playpause", "volumeup", "volumedown",
+                   "volumemute", "esc", "enter"}
+        if key not in allowed:
+            raise ValueError("unsupported key")
+        pyautogui.press(key)
