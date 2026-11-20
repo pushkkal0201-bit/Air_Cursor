@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump type
+        required: true
+        default: patch
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Read current version
+        id: ver
+        shell: bash
+        run: |
+          CUR=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "current=$CUR" >> $GITHUB_OUTPUT
+
+      - name: Compute next version
+        id: next
+        shell: bash
+        run: |
+          CUR='${{ steps.ver.outputs.current }}'
+          IFS='.' read -r MA MI PA <<< "$CUR"
+          case '${{ github.event.inputs.bump }}' in
+            major) MA=$((MA+1)); MI=0; PA=0;;
+            minor) MI=$((MI+1)); PA=0;;
+            *)     PA=$((PA+1));;
+          esac
+          NEW="$MA.$MI.$PA"
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+
+      - name: Bump version in files
+        shell: bash
+        run: |
+          CUR='${{ steps.ver.outputs.current }}'
+          NEW='${{ steps.next.outputs.new }}'
+          sed -i "s/version = \"$CUR\"/version = \"NEW_PLACEHOLDER\"/" pyproject.toml
+          sed -i "s/__version__ = \"$CUR\"/__version__ = \"NEW_PLACEHOLDER\"/" src/aircursor/__init__.py
+          sed -i "s/NEW_PLACEHOLDER/$NEW/" pyproject.toml src/aircursor/__init__.py
+          grep -q "version = \"$NEW\"" pyproject.toml
+          grep -q "__version__ = \"$NEW\"" src/aircursor/__init__.py
+
+      - name: Commit and tag
+        shell: bash
+        run: |
+          NEW='${{ steps.next.outputs.new }}'
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pyproject.toml src/aircursor/__init__.py
+          git commit -m "chore(release): v$NEW" || echo "No changes to commit"
+          git tag -f "v$NEW"
+          git push origin HEAD:main --tags
+
+      - name: Build package
+        run: python -m build
+
+      - name: Determine publish targets
+        id: gate
+        shell: bash
+        env:
+          HAS_TEST: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          HAS_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$HAS_TEST" ]; then echo "test=true" >> $GITHUB_OUTPUT; else echo "test=false" >> $GITHUB_OUTPUT; fi
+          if [ -n "$HAS_PYPI" ]; then echo "pypi=true" >> $GITHUB_OUTPUT; else echo "pypi=false" >> $GITHUB_OUTPUT; fi
+
+      - name: Publish to TestPyPI
+        if: ${{ steps.gate.outputs.test == 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          packages-dir: dist
+          skip-existing: true
+          verify-metadata: true
+
+      - name: Publish to PyPI
+        if: ${{ steps.gate.outputs.pypi == 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist
+          skip-existing: true
+          verify-metadata: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.next.outputs.new }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
