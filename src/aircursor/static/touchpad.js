@@ -35,9 +35,81 @@ pad.addEventListener('touchstart',e=>{if(e.touches.length>=2){state.scroll=true;
 pad.addEventListener('touchmove',e=>{if(!state.scroll||e.touches.length<2)return;e.preventDefault();const avg=(e.touches[0].clientY+e.touches[1].clientY)/2;const dy=Math.max(-12,Math.min(12,Math.round((state.lastAvg-avg)/5)));state.lastAvg=avg;if(dy)api('scroll','POST',{dy}).catch(err=>message(err.message,true));},{passive:false});
 pad.addEventListener('touchend',e=>{if(e.touches.length<2)state.scroll=false;});
 pad.addEventListener('touchcancel',()=>{state.scroll=false;});
-function stopMotion(){state.motion=false;state.orientation=null;window.removeEventListener('deviceorientation',onOrientation);$('motion-start').disabled=false;$('motion-stop').disabled=true;$('motion-calibrate').disabled=true;}
-function onOrientation(e){if(!state.motion||!state.paired||e.gamma===null||e.beta===null)return;const now=performance.now();if(!state.orientation){state.orientation={gamma:e.gamma,beta:e.beta};return;}if(now-state.lastMotionSent<45)return;const dg=e.gamma-state.orientation.gamma,db=e.beta-state.orientation.beta;state.orientation={gamma:e.gamma,beta:e.beta};state.lastMotionSent=now;const speed=Number(settings.motionSpeed);if(Math.abs(dg)<.2&&Math.abs(db)<.2)return;queueMove(Math.max(-35,Math.min(35,dg*speed*2)),Math.max(-35,Math.min(35,db*speed*2)));}
-$('motion-start').onclick=async()=>{if(!window.isSecureContext){motionMessage('Motion requires a trusted HTTPS connection (HTTP works for the touchpad).',true);return;}if(!('DeviceOrientationEvent' in window)){motionMessage('This browser does not support phone orientation sensors.',true);return;}try{if(typeof DeviceOrientationEvent.requestPermission==='function'){const permission=await DeviceOrientationEvent.requestPermission();if(permission!=='granted')throw new Error('Sensor permission denied');}state.motion=true;state.orientation=null;window.addEventListener('deviceorientation',onOrientation);$('motion-start').disabled=true;$('motion-stop').disabled=false;$('motion-calibrate').disabled=false;motionMessage('Motion enabled. Move your phone gently; tap Calibrate to reset.');}catch(e){motionMessage(e.message,true);}};
-$('motion-stop').onclick=()=>{stopMotion();motionMessage('Motion stopped.');};
-$('motion-calibrate').onclick=()=>{state.orientation=null;motionMessage('Calibrated. Move your phone to control the cursor.');};
+const motionTransport=$('motion-transport');
+motionTransport.textContent=window.isSecureContext
+  ? 'Secure browser context detected. Motion sensors may be available.'
+  : 'Insecure HTTP address. Open AirCursor using its trusted HTTPS Tailscale URL.';
+state.motionTimer=null;
+state.sensorSeen=false;
+state.lastMotionDisplay=0;
+function stopMotion(){
+  state.motion=false;
+  state.orientation=null;
+  state.sensorSeen=false;
+  if(state.motionTimer!==null){clearTimeout(state.motionTimer);state.motionTimer=null;}
+  window.removeEventListener('deviceorientation',onOrientation);
+  $('motion-start').disabled=false;
+  $('motion-stop').disabled=true;
+  $('motion-calibrate').disabled=true;
+}
+function onOrientation(e){
+  if(!state.motion||!state.paired||!Number.isFinite(e.gamma)||!Number.isFinite(e.beta))return;
+  state.sensorSeen=true;
+  if(state.motionTimer!==null){clearTimeout(state.motionTimer);state.motionTimer=null;}
+  const now=performance.now();
+  if(!state.orientation){
+    state.orientation={gamma:e.gamma,beta:e.beta};
+    motionMessage('Sensor connected. Tilt the phone to move the cursor; tap Calibrate to reset neutral.');
+    return;
+  }
+  if(now-state.lastMotionSent<45)return;
+  state.lastMotionSent=now;
+  const value=window.AirCursorMotion.tiltToMovement(
+    {gamma:e.gamma,beta:e.beta},state.orientation,Number(settings.motionSpeed)
+  );
+  if(value.dx||value.dy)queueMove(value.dx,value.dy);
+  if(now-state.lastMotionDisplay>900){
+    state.lastMotionDisplay=now;
+    const tiltX=Math.round(e.gamma-state.orientation.gamma);
+    const tiltY=Math.round(e.beta-state.orientation.beta);
+    $('motion-reading').textContent='Tilt X: '+tiltX+'°, Y: '+tiltY+'° (dead zone ±2°)';
+  }
+}
+$('motion-start').onclick=async()=>{
+  if(!window.isSecureContext){
+    motionMessage('Open the trusted HTTPS Tailscale URL on your phone; LAN HTTP cannot use motion sensors.',true);return;
+  }
+  if(!('DeviceOrientationEvent' in window)){
+    motionMessage('This browser does not support phone orientation sensors.',true);return;
+  }
+  try {
+    if(typeof DeviceOrientationEvent.requestPermission==='function'){
+      const permission=await DeviceOrientationEvent.requestPermission();
+      if(permission!=='granted')throw new Error('Sensor permission denied');
+    }
+    state.motion=true;
+    state.orientation=null;
+    state.lastMotionSent=0;
+    state.sensorSeen=false;
+    window.addEventListener('deviceorientation',onOrientation);
+    $('motion-start').disabled=true;
+    $('motion-stop').disabled=false;
+    $('motion-calibrate').disabled=false;
+    $('motion-reading').textContent='Waiting for sensor readings…';
+    motionMessage('Motion enabled. Hold your phone steady to establish neutral position.');
+    state.motionTimer=setTimeout(()=>{
+      if(state.motion&&!state.sensorSeen){
+        motionMessage('No orientation readings. Check phone sensor permissions and use a compatible browser.',true);
+      }
+    },3000);
+  }catch(e){stopMotion();motionMessage(e.message,true);}
+};
+$('motion-stop').onclick=()=>{stopMotion();motionMessage('Motion stopped.');$('motion-reading').textContent='';};
+$('motion-calibrate').onclick=()=>{
+  state.orientation=null;
+  $('motion-reading').textContent='Establishing a new neutral position…';
+  motionMessage('Hold your phone comfortably and steadily, then tilt to move the cursor.');
+};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.motion){stopMotion();motionMessage('Motion paused while the page is hidden.');}});
+window.addEventListener('pagehide',()=>{if(state.motion)stopMotion();});
 setOptions();start();

@@ -1,6 +1,6 @@
-; AirCursor 2.2.0 Windows installer, built after PyInstaller.
+; AirCursor 2.3.0 Windows installer, built after PyInstaller.
 #define MyAppName "AirCursor"
-#define MyAppVersion "2.2.0"
+#define MyAppVersion "2.3.0"
 #define MyAppPublisher "Pushkkal Gupta"
 #define MyAppURL "https://github.com/pushkkal0201-bit/Air_Cursor"
 
@@ -15,7 +15,7 @@ DefaultDirName={localappdata}\Programs\AirCursor
 DefaultGroupName=AirCursor
 DisableProgramGroupPage=yes
 OutputDir=..\dist\installer
-OutputBaseFilename=AirCursor-2.2.0-Windows-Setup
+OutputBaseFilename=AirCursor-2.3.0-Windows-Setup
 Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=lowest

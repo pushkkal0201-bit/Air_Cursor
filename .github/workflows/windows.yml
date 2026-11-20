@@ -32,7 +32,7 @@ jobs:
         run: |
           $output = & .\dist\AirCursor\AirCursor.exe --version
           Write-Host $output
-          if ($LASTEXITCODE -ne 0 -or $output -notmatch "AirCursor 2.2.0") {
+          if ($LASTEXITCODE -ne 0 -or $output -notmatch "AirCursor 2.3.0") {
             throw "Portable executable smoke test failed"
           }
       - name: Include license and upstream attribution
@@ -43,12 +43,12 @@ jobs:
       - name: Create portable ZIP
         shell: pwsh
         run: |
-          Compress-Archive -Path dist\AirCursor\* -DestinationPath dist\AirCursor-2.2.0-Windows-Portable.zip -Force
+          Compress-Archive -Path dist\AirCursor\* -DestinationPath dist\AirCursor-2.3.0-Windows-Portable.zip -Force
       - name: Upload portable executable
         uses: actions/upload-artifact@v4
         with:
-          name: AirCursor-2.2.0-Windows-Portable
-          path: dist/AirCursor-2.2.0-Windows-Portable.zip
+          name: AirCursor-2.3.0-Windows-Portable
+          path: dist/AirCursor-2.3.0-Windows-Portable.zip
           if-no-files-found: error
           retention-days: 14
       - name: Install Inno Setup
@@ -64,7 +64,7 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: AirCursor-2.2.0-Windows-Installer
+          name: AirCursor-2.3.0-Windows-Installer
           path: dist/installer/*.exe
           if-no-files-found: error
           retention-days: 14
