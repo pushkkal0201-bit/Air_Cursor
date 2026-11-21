@@ -1,6 +1,6 @@
-<div align="center">
-
+<p align="center">
 <img src="docs/assets/aircursor-hero.svg" alt="AirCursor: a multi-modal desktop control system connecting a phone, webcam-based hand tracking, and desktop input" width="100%" />
+</p>
 
 # AirCursor
 
@@ -8,13 +8,13 @@
 
 **Control a computer using a phone touchpad, phone orientation, hand gestures, or voice shortcuts — through one thoughtfully constrained desktop-control architecture.**
 
-<p>
+<p align="center">
   <a href="#quick-start"><img alt="Quick Start" src="https://img.shields.io/badge/Get_Started-Quick_Start-26C6DA?style=for-the-badge" /></a>
   <a href="#system-architecture"><img alt="Architecture" src="https://img.shields.io/badge/Explore-System_Architecture-6C80F5?style=for-the-badge" /></a>
   <a href="#security-model"><img alt="Security" src="https://img.shields.io/badge/Review-Security_Model-6AC8A6?style=for-the-badge" /></a>
 </p>
 
-<p>
+<p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white"/>
   <img alt="Flask" src="https://img.shields.io/badge/Flask-101828?style=flat-square&logo=flask&logoColor=white"/>
   <img alt="OpenCV" src="https://img.shields.io/badge/OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white"/>
@@ -28,7 +28,6 @@
 
 [Features](#capabilities-at-a-glance) · [How it works](#how-aircursor-works) · [Installation](#quick-start) · [API](#rest-api-reference) · [Troubleshooting](#troubleshooting)
 
-</div>
 
 ---
 
@@ -451,18 +450,18 @@ flowchart TD
 
 For each supported axis, the browser computes:
 
-\[
+$
 \Delta \theta = \theta_{\text{current}} - \theta_{\text{neutral}}
-\]
+$
 
-\[
+$
 m = \operatorname{round}\left(
 \operatorname{clamp}\left(
 \operatorname{sgn}(\Delta\theta)
 \cdot \max(|\Delta\theta|-2,0)
 \cdot 0.25s,\;-28,\;28
 \right)\right)
-\]
+$
 
 where **`s`** is the selected motion sensitivity, **`2°`** is the dead zone that suppresses small orientation changes, and **`m`** is the relative cursor movement sent on that axis.
 
@@ -542,9 +541,9 @@ flowchart TD
 
 **Pointer smoothing.** Let `p_t` be the new fingertip-derived target coordinate and `q_t` the smoothed cursor target:
 
-\[
+$
 q_t = q_{t-1} + \alpha(p_t - q_{t-1})
-\]
+$
 
 The default **`α = 0.28`** reduces abrupt pointer changes. A separate movement dead zone (default **3 pixels**) avoids sending imperceptibly small moves.
 
@@ -1046,7 +1045,6 @@ AirCursor is distributed under the **MIT License**. See the repository's [LICENS
 
 ---
 
-<div align="center">
 
 ### AirCursor — choose the interaction, keep the control.
 
@@ -1054,4 +1052,3 @@ AirCursor is distributed under the **MIT License**. See the repository's [LICENS
 
 [Back to top](#aircursor) · [View source repository](https://github.com/pushkkal0201-bit/Air_Cursor) · [Report an issue](https://github.com/pushkkal0201-bit/Air_Cursor/issues)
 
-</div>
