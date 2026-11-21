@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="370" viewBox="0 0 1280 370" role="img" aria-label="Four AirCursor input modes: phone touchpad, phone tilt, camera hand gestures and voice shortcuts">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08182D"/><stop offset="1" stop-color="#131B3B"/></linearGradient>
+ <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55F2D7"/><stop offset="1" stop-color="#49A8FD"/></linearGradient>
+</defs>
+<rect width="1280" height="370" rx="22" fill="url(#bg)"/>
+<g font-family="Inter,Segoe UI,Arial" text-anchor="middle">
+<g transform="translate(28,24)">
+ <rect width="286" height="322" rx="20" fill="#122643" stroke="#285579"/>
+ <rect x="101" y="30" width="84" height="133" rx="16" fill="#071426" stroke="#5D88AE" stroke-width="3"/>
+ <rect x="113" y="43" width="60" height="94" rx="8" fill="#1A4666"/>
+ <path d="M143 61v58M120 90h46" stroke="#62F1E5" stroke-opacity=".6"/>
+ <circle cx="142" cy="93" r="12" stroke="#73ECF5" stroke-width="3" fill="none"/>
+ <circle cx="143" cy="149" r="4" fill="#78A2CA"/>
+ <text x="143" y="204" fill="#EFFAFF" font-size="21" font-weight="800">01 / TOUCH</text>
+ <text x="143" y="240" fill="#AFC3DC" font-size="14">Touchpad, taps, scrolling</text>
+ <text x="143" y="265" fill="#AFC3DC" font-size="14">and shortcut buttons</text>
+ <rect x="67" y="286" width="152" height="20" rx="10" fill="#17485B"/><text x="143" y="300" font-size="10" fill="#6CF8E8" letter-spacing="1.3">BROWSER INPUT</text>
+</g>
+<g transform="translate(338,24)">
+ <rect width="286" height="322" rx="20" fill="#1E204B" stroke="#504B8D"/>
+ <g transform="translate(98,37) rotate(-22 45 60)">
+  <rect width="90" height="126" rx="17" fill="#071426" stroke="#B19DFB" stroke-width="3"/>
+  <rect x="12" y="14" width="66" height="97" rx="10" fill="#332E6B"/>
+  <path d="M45 25v73M17 62h56" stroke="#C5B3FF" stroke-width="2" stroke-dasharray="5 6"/>
+  <circle cx="45" cy="63" r="15" fill="none" stroke="#C5B3FF" stroke-width="2"/>
+ </g>
+ <path d="M59 71q-32 39-2 76M230 72q31 42 1 74" fill="none" stroke="#A88CF4" stroke-width="4" stroke-linecap="round"/>
+ <text x="143" y="204" fill="#EFFAFF" font-size="21" font-weight="800">02 / MOTION</text>
+ <text x="143" y="240" fill="#AFC3DC" font-size="14">Calibrated phone tilt</text>
+ <text x="143" y="265" fill="#AFC3DC" font-size="14">controls cursor velocity</text>
+ <rect x="67" y="286" width="152" height="20" rx="10" fill="#393167"/><text x="143" y="300" font-size="10" fill="#CBB9FF" letter-spacing="1.3">SENSOR INPUT</text>
+</g>
+<g transform="translate(648,24)">
+ <rect width="286" height="322" rx="20" fill="#132C48" stroke="#295F83"/>
+ <path d="M85 156L75 98 91 62M85 156L113 84 117 47M85 156L153 85 174 43M85 156L186 120 216 85M85 156L195 157 220 145" fill="none" stroke="#50DDEF" stroke-width="4" stroke-linecap="round"/>
+ <g fill="#9AF7FF"><circle cx="85" cy="156" r="8"/><circle cx="91" cy="62" r="7"/><circle cx="117" cy="47" r="7"/><circle cx="174" cy="43" r="7"/><circle cx="216" cy="85" r="7"/><circle cx="220" cy="145" r="7"/></g>
+ <text x="143" y="204" fill="#EFFAFF" font-size="21" font-weight="800">03 / VISION</text>
+ <text x="143" y="240" fill="#AFC3DC" font-size="14">Hand landmark tracking</text>
+ <text x="143" y="265" fill="#AFC3DC" font-size="14">with gesture recognition</text>
+ <rect x="67" y="286" width="152" height="20" rx="10" fill="#174A64"/><text x="143" y="300" font-size="10" fill="#80EFFF" letter-spacing="1.3">WEBCAM INPUT</text>
+</g>
+<g transform="translate(958,24)">
+ <rect width="294" height="322" rx="20" fill="#29213F" stroke="#674C83"/>
+ <rect x="121" y="42" width="52" height="84" rx="26" fill="none" stroke="#DDB0FA" stroke-width="7"/>
+ <path d="M105 91a42 42 0 0 0 84 0M147 132v25M126 157h42" stroke="#DDB0FA" stroke-width="6" fill="none" stroke-linecap="round"/>
+ <path d="M88 78q-24 24 0 51M207 78q23 24 0 51" stroke="#A480D6" stroke-width="4" fill="none" stroke-linecap="round"/>
+ <text x="147" y="204" fill="#EFFAFF" font-size="21" font-weight="800">04 / VOICE</text>
+ <text x="147" y="240" fill="#AFC3DC" font-size="14">Push-to-talk shortcuts</text>
+ <text x="147" y="265" fill="#AFC3DC" font-size="14">with a fixed command set</text>
+ <rect x="71" y="286" width="152" height="20" rx="10" fill="#483057"/><text x="147" y="300" font-size="10" fill="#E5B9FB" letter-spacing="1.3">SPEECH INPUT</text>
+</g>
+</g>
+</svg>
