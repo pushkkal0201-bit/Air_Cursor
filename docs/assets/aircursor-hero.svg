@@ -17,7 +17,7 @@
  <rect x="74" y="73" width="156" height="29" rx="15" fill="#153B51" stroke="#2CC3D6" stroke-opacity=".6"/>
  <circle cx="94" cy="88" r="4" fill="#43F0D1"/><text x="110" y="93" font-size="12" letter-spacing="2" font-weight="700" fill="#86DFF2">HUMAN INTERFACE</text>
  <text x="72" y="198" font-size="77" font-weight="800" letter-spacing="-3" fill="#F1F7FF">Air<tspan fill="url(#accent)">Cursor</tspan></text>
- <text x="75" y="242" fill="#C5D3EB" font-size="21" font-weight="500">Control your computer beyond the mouse.</text>
+ <text x="75" y="242" fill="#C5D3EB" font-size="21" font-weight="500">One desktop. Four ways to control.</text>
  <text x="75" y="277" fill="#91A6C8" font-size="17">Touch. Tilt. Gesture. Speak.</text>
  <g font-size="14" font-weight="700">
   <rect x="75" y="331" width="115" height="38" rx="19" fill="#103E53" stroke="#2A8EA9"/><text x="103" y="355" fill="#69E1EF">TOUCH</text>
