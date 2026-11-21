@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aircursor"
 version = "2.3.0"
-description = "Paired remote mouse server with phone controls and optional webcam gestures"
+description = "AirCursor - one desktop, four ways to control: touch, tilt, gestures, and voice"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "NiqueWrld", email = "niquewrld@outlook.com" }]
