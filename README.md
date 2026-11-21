@@ -6,7 +6,9 @@
 
 ### A multi-modal desktop interaction system
 
-**Control a computer using a phone touchpad, phone orientation, hand gestures, or voice shortcuts — through one thoughtfully constrained desktop-control architecture.**
+**One desktop. Four ways to control.**
+
+Control your computer through **touch, tilt, hand gestures, or voice** — with a PIN-protected local service and a browser-first control interface.
 
 <p align="center">
   <a href="#quick-start"><img alt="Quick Start" src="https://img.shields.io/badge/Get_Started-Quick_Start-26C6DA?style=for-the-badge" /></a>
@@ -1046,7 +1048,7 @@ AirCursor is distributed under the **MIT License**. See the repository's [LICENS
 ---
 
 
-### AirCursor — choose the interaction, keep the control.
+### AirCursor — One desktop. Four ways to control.
 
 **Touch · Motion · Vision · Voice**
 
